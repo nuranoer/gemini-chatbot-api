@@ -13,16 +13,17 @@ app.use(cors());
 app.use(express.json());
 
 app.post('/api/chat', async (req, res) => {
-  const { conversation } = req.body;
-
   try {
-    // ✅ Perbaikan: ubah "messages" jadi "conversation"
-    if (!Array.isArray(conversation))
-      throw new Error('Messages must be an array!');
+    const { messages } = req.body;                   // ✅ pakai messages
 
-    const contents = conversation.map(({ role, text }) => ({
-      role,
-      parts: [{ text }],
+    if (!Array.isArray(messages) || messages.length === 0) {
+      throw new Error('Messages must be an array!');
+    }
+
+    // role 'assistant' → 'model', sisanya 'user'
+    const contents = messages.map(({ role, content }) => ({
+      role: role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: content || '' }],
     }));
 
     const response = await ai.models.generateContent({
@@ -30,9 +31,11 @@ app.post('/api/chat', async (req, res) => {
       contents,
     });
 
-    res.status(200).json({ result: response.text });
+    // @google/genai: hasilnya umumnya di response.text
+    return res.status(200).json({ result: response.text });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error(e);
+    return res.status(500).json({ error: e.message });
   }
 });
 
